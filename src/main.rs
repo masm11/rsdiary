@@ -6,21 +6,23 @@ use sudachi::analysis::Mode;
 use sudachi::analysis::stateful_tokenizer::StatefulTokenizer;
 use sudachi::dic::dictionary::JapaneseDictionary;
 
-fn tokenize(string: String) -> HashSet<String> {
+fn get_dict() -> JapaneseDictionary {
     let config = Config::new(
 	Some(PathBuf::from("./t/sudachi.rs/resources/sudachi.json")),
 	Some(PathBuf::from("./t/sudachi.rs/resources")),
 	Some(PathBuf::from("./t/sudachi.rs/resources/system.dic")),
     ).expect("Failed to load config file");
-    let dict = JapaneseDictionary::from_cfg(&config)
-	.unwrap_or_else(|e| panic!("Failed to create dictionary: {:?}", e));
+    JapaneseDictionary::from_cfg(&config)
+	.unwrap_or_else(|e| panic!("Failed to create dictionary: {:?}", e))
+}
 
+fn tokenize(string: String, dict: &JapaneseDictionary) -> HashSet<String> {
     let mut set = HashSet::<String>::new();
 
     let mut analyzers = [
-	StatefulTokenizer::new(&dict, Mode::A),
-	StatefulTokenizer::new(&dict, Mode::B),
-	StatefulTokenizer::new(&dict, Mode::C),
+	StatefulTokenizer::new(dict, Mode::A),
+	StatefulTokenizer::new(dict, Mode::B),
+	StatefulTokenizer::new(dict, Mode::C),
     ];
     for ana in analyzers.iter_mut() {
 	ana.reset().push_str(&string[..]);
@@ -38,8 +40,10 @@ fn tokenize(string: String) -> HashSet<String> {
 }
 
 fn main() {
-    let ss = String::from("今日は東京駅に行きます。");
-    let set = tokenize(ss);
+    let dict = get_dict();
+
+    let ss = String::from("今日は東京駅に行きます。よろしくお願いします。");
+    let set = tokenize(ss, &dict);
     for s in set.iter() {
 	println!("{}", s);
     }
