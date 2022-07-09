@@ -15,17 +15,24 @@ fn tokenize(string: String) -> HashSet<String> {
     let dict = JapaneseDictionary::from_cfg(&config)
 	.unwrap_or_else(|e| panic!("Failed to create dictionary: {:?}", e));
 
-    let mut analyzer = StatefulTokenizer::new(&dict, Mode::C);
-    analyzer.reset().push_str(&string[..]);
-    analyzer.do_tokenize()
-	.unwrap_or_else(|_| panic!("Failed to tokenize."));
-    let mut morphs = MorphemeList::empty(analyzer.dict_clone());
-    morphs.collect_results(&mut analyzer)
-	.unwrap_or_else(|_| panic!("Failed to collect results."));
     let mut set = HashSet::<String>::new();
-    for m in morphs.iter() {
-	set.insert(m.surface().to_string());
-	set.insert(m.normalized_form().to_string());
+
+    let mut analyzers = [
+	StatefulTokenizer::new(&dict, Mode::A),
+	StatefulTokenizer::new(&dict, Mode::B),
+	StatefulTokenizer::new(&dict, Mode::C),
+    ];
+    for ana in analyzers.iter_mut() {
+	ana.reset().push_str(&string[..]);
+	ana.do_tokenize()
+	    .unwrap_or_else(|_| panic!("Failed to tokenize."));
+	let mut morphs = MorphemeList::empty(ana.dict_clone());
+	morphs.collect_results(ana)
+	    .unwrap_or_else(|_| panic!("Failed to collect results."));
+	for m in morphs.iter() {
+	    set.insert(m.surface().to_string());
+	    set.insert(m.normalized_form().to_string());
+	}
     }
     set
 }
