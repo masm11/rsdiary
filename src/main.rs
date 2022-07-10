@@ -102,7 +102,14 @@ fn write_index_words(words: HashMap<String, u32>) {
 	Ok(file) => file,
     };
 
-    let mut ary: Vec<&String> = Vec::<&String>::new();
+    let mut max_id = 0;
+    for (_, id) in words.iter() {
+	if max_id < *id {
+	    max_id = *id;
+	}
+    }
+    let empty_string = String::from("");
+    let mut ary: Vec<&String> = vec![&empty_string; (max_id + 1) as usize];
     for (s, id) in words.iter() {
 	ary[*id as usize] = s;
     }
