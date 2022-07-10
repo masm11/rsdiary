@@ -24,8 +24,7 @@ fn get_dict() -> JapaneseDictionary {
 	Some(PathBuf::from("./t/sudachi.rs/resources")),
 	Some(PathBuf::from("./t/sudachi.rs/resources/system.dic")),
     ).expect("Failed to load config file");
-    JapaneseDictionary::from_cfg(&config)
-	.unwrap_or_else(|e| panic!("Failed to create dictionary: {:?}", e))
+    JapaneseDictionary::from_cfg(&config).expect("Failed to read dict.")
 }
 
 fn tokenize(string: String, dict: &JapaneseDictionary) -> HashSet<String> {
@@ -38,11 +37,9 @@ fn tokenize(string: String, dict: &JapaneseDictionary) -> HashSet<String> {
     ];
     for ana in analyzers.iter_mut() {
 	ana.reset().push_str(&string[..]);
-	ana.do_tokenize()
-	    .unwrap_or_else(|_| panic!("Failed to tokenize."));
+	ana.do_tokenize().expect("Failed to tokenize.");
 	let mut morphs = MorphemeList::empty(ana.dict_clone());
-	morphs.collect_results(ana)
-	    .unwrap_or_else(|_| panic!("Failed to collect results."));
+	morphs.collect_results(ana).expect("Failed to collect results.");
 	for m in morphs.iter() {
 	    set.insert(m.surface().to_string());
 	    set.insert(m.normalized_form().to_string());
@@ -73,10 +70,7 @@ fn read_index_words() -> HashMap<String, u32> {
 
 fn read_index_matrix() -> HashMap<String, HashSet<u32>> {
     let path = Path::new("index.matrix.txt");
-    let file = match File::open(&path) {
-	Err(why) => panic!("couldn't open {}: {}", path.display(), why),
-	Ok(file) => file,
-    };
+    let file = File::open(&path).expect("Failed to open index.matrix.txt.");
     let file = BufReader::new(file);
 
     let mut mat = HashMap::<String, HashSet<u32>>::new();
@@ -98,10 +92,7 @@ fn read_index_matrix() -> HashMap<String, HashSet<u32>> {
 
 fn write_index_words(words: HashMap<String, u32>) {
     let path = Path::new("index.words.txt.new");
-    let mut file = match File::create(&path) {
-	Err(why) => panic!("couldn't create {}: {}", path.display(), why),
-	Ok(file) => file,
-    };
+    let mut file = File::create(&path).expect("Failed to create index.words.txt.new.");
 
     let mut max_id = 0;
     for (_, id) in words.iter() {
@@ -116,45 +107,24 @@ fn write_index_words(words: HashMap<String, u32>) {
     }
 
     for s in ary.iter() {
-	match file.write_all(s.as_bytes()) {
-	    Err(why) => panic!("couldn't write word to {}: {}", path.display(), why),
-	    Ok(_) => (),
-	}
-	match file.write_all(b"\n") {
-	    Err(why) => panic!("couldn't write lf to {}: {}", path.display(), why),
-	    Ok(_) => (),
-	}
+	file.write_all(s.as_bytes()).expect("Failed to write word.");
+	file.write_all(b"\n").expect("Failed to write LF.");
     }
 }
 
 fn write_index_matrix(mat: HashMap::<String, HashSet<u32>>) {
     let path = Path::new("index.matrix.txt.new");
-    let mut file = match File::create(&path) {
-	Err(why) => panic!("couldn't create {}: {}", path.display(), why),
-	Ok(file) => file,
-    };
+    let mut file = File::create(&path).expect("Failed to create index.matrix.txt.new.");
 
     for (fname, word_ids) in mat.iter() {
-	match file.write_all(fname.as_bytes()) {
-	    Err(why) => panic!("couldn't write fname to {}: {}", path.display(), why),
-	    Ok(_) => (),
-	}
+	file.write_all(fname.as_bytes()).expect("Failed to write filename.");
 	let mut delim = b"\t";
 	for id in word_ids.iter() {
-	    match file.write_all(delim) {
-		Err(why) => panic!("couldn't write delim to {}: {}", path.display(), why),
-		Ok(_) => (),
-	    }
-	    match file.write_all(id.to_string().as_bytes()) {
-		Err(why) => panic!("couldn't write word to {}: {}", path.display(), why),
-		Ok(_) => (),
-	    }
+	    file.write_all(delim).expect("Failed to write delimiter.");
+	    file.write_all(id.to_string().as_bytes()).expect("Failed to write word_id.");
 	    delim = b" ";
 	}
-	match file.write_all(b"\n") {
-	    Err(why) => panic!("couldn't write lf to {}: {}", path.display(), why),
-	    Ok(_) => (),
-	}
+	file.write_all(b"\n").expect("Failed to write LF.");
     }
 }
 
@@ -166,10 +136,7 @@ fn main() {
 
     for inp in &env::args().collect::<Vec<String>>()[1..] {
 	let inp_path = Path::new(&inp);
-	let mut file = match File::open(&inp_path) {
-	    Err(why) => panic!("couldn't open {}: {}", inp, why),
-	    Ok(file) => file,
-	};
+	let mut file = File::open(&inp_path).expect("Failed to open file.");
 
 	let mut buf = String::new();
 	if let Err(why) = file.read_to_string(&mut buf) {
