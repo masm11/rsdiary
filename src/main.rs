@@ -1,8 +1,9 @@
 use std::env;
 use std::path::PathBuf;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::fs::File;
 use std::io::prelude::*;   // write_all
+use std::io::BufReader;
 use std::path::Path;
 use sudachi::prelude::MorphemeList;
 use sudachi::config::Config;
@@ -49,14 +50,111 @@ fn tokenize(string: String, dict: &JapaneseDictionary) -> HashSet<String> {
     set
 }
 
+fn read_index_words() -> HashMap<String, u32> {
+    let path = Path::new("index.words.txt");
+    let file = match File::open(&path) {
+	Err(why) => panic!("couldn't open {}: {}", path.display(), why),
+	Ok(file) => file,
+    };
+    let file = BufReader::new(file);
+
+    let mut map = HashMap::<String, u32>::new();
+    let mut word_id: u32 = 0;
+
+    for line in file.lines() {
+	let line = line.unwrap();
+	map.insert(line, word_id);
+	word_id += 1;
+    }
+
+    map
+}
+
+fn read_index_matrix() -> HashMap<String, HashSet<u32>> {
+    let path = Path::new("index.matrix.txt");
+    let file = match File::open(&path) {
+	Err(why) => panic!("couldn't open {}: {}", path.display(), why),
+	Ok(file) => file,
+    };
+    let file = BufReader::new(file);
+
+    let mut mat = HashMap::<String, HashSet<u32>>::new();
+
+    for line in file.lines() {
+	let line = line.unwrap();
+	let mut iter = line.split_ascii_whitespace();
+	let path = iter.next().unwrap();
+	let mut word_ids = HashSet::<u32>::new();
+	for s in iter {
+	    let id: u32 = s.parse().unwrap();
+	    word_ids.insert(id);
+	}
+	mat.insert(path.to_string(), word_ids);
+    }
+
+    mat
+}
+
+fn write_index_words(words: HashMap<String, u32>) {
+    let path = Path::new("index.words.txt.new");
+    let mut file = match File::create(&path) {
+	Err(why) => panic!("couldn't create {}: {}", path.display(), why),
+	Ok(file) => file,
+    };
+
+    let mut ary: Vec<&String> = Vec::<&String>::new();
+    for (s, id) in words.iter() {
+	ary[*id as usize] = s;
+    }
+
+    for s in ary.iter() {
+	match file.write_all(s.as_bytes()) {
+	    Err(why) => panic!("couldn't write word to {}: {}", path.display(), why),
+	    Ok(_) => (),
+	}
+	match file.write_all(b"\n") {
+	    Err(why) => panic!("couldn't write lf to {}: {}", path.display(), why),
+	    Ok(_) => (),
+	}
+    }
+}
+
+fn write_index_matrix(mat: HashMap::<String, HashSet<u32>>) {
+    let path = Path::new("index.matrix.txt.new");
+    let mut file = match File::create(&path) {
+	Err(why) => panic!("couldn't create {}: {}", path.display(), why),
+	Ok(file) => file,
+    };
+
+    for (fname, word_ids) in mat.iter() {
+	match file.write_all(fname.as_bytes()) {
+	    Err(why) => panic!("couldn't write fname to {}: {}", path.display(), why),
+	    Ok(_) => (),
+	}
+	let mut delim = b"\t";
+	for id in word_ids.iter() {
+	    match file.write_all(delim) {
+		Err(why) => panic!("couldn't write delim to {}: {}", path.display(), why),
+		Ok(_) => (),
+	    }
+	    match file.write_all(id.to_string().as_bytes()) {
+		Err(why) => panic!("couldn't write word to {}: {}", path.display(), why),
+		Ok(_) => (),
+	    }
+	    delim = b" ";
+	}
+	match file.write_all(b"\n") {
+	    Err(why) => panic!("couldn't write lf to {}: {}", path.display(), why),
+	    Ok(_) => (),
+	}
+    }
+}
+
 fn main() {
     let dict = get_dict();
 
-    let index_path = Path::new("index.txt");
-    let mut index = match File::create(&index_path) {
-	Err(why) => panic!("couldn't create {}: {}", index_path.display(), why),
-	Ok(index) => index,
-    };
+    let mut index_words = read_index_words();
+    let mut index_matrix = read_index_matrix();
 
     for inp in &env::args().collect::<Vec<String>>()[1..] {
 	let inp_path = Path::new(&inp);
@@ -90,4 +188,6 @@ fn main() {
 	}
     }
 
+    write_index_words(index_words);
+    write_index_matrix(index_matrix);
 }
