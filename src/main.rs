@@ -162,30 +162,29 @@ fn main() {
 	    Err(why) => panic!("couldn't open {}: {}", inp, why),
 	    Ok(file) => file,
 	};
+
 	let mut buf = String::new();
 	if let Err(why) = file.read_to_string(&mut buf) {
 	    panic!("couldn't read {}: {}", inp_path.display(), why);
 	}
-	
 	let buf = replace_lf(&buf);
-
-	if let Err(why) = index.write_all(inp.as_bytes()) {
-	    panic!("couldn't write to {}: {}", index_path.display(), why);
-	}
-	if let Err(why) = index.write_all("\t".as_bytes()) {
-	    panic!("couldn't write to {}: {}", index_path.display(), why);
-	}
 	
 	let set = tokenize(buf, &dict);
 	
-	for s in set.iter() {
-	    if let Err(why) = index.write_all(s.as_bytes()) {
-		panic!("couldn't write to {}: {}", index_path.display(), why);
-	    }
-	    if let Err(why) = index.write_all(b" ") {
-		panic!("couldn't write to {}: {}", index_path.display(), why);
-	    }
+	let mut word_ids = HashSet::<u32>::new();
+	for word in set.iter() {
+	    let word_id: u32 = match index_words.get(word) {
+		Some(id) => *id,
+		None => {
+		    let new_id = index_words.len() as u32;
+		    index_words.insert(word.clone(), new_id);
+		    new_id
+		}
+	    };
+
+	    word_ids.insert(word_id);
 	}
+	index_matrix.insert(inp.clone(), word_ids);
     }
 
     write_index_words(index_words);
