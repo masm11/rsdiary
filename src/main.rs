@@ -1,6 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 use std::collections::{HashSet, HashMap};
+use std::fs;
 use std::fs::File;
 use std::io::prelude::*;   // write_all
 use std::io::BufReader;
@@ -196,4 +197,15 @@ fn main() {
 
     write_index_words(index_words);
     write_index_matrix(index_matrix);
+
+    if let Err(why) = fs::remove_file("index.words.txt.old") {
+	eprintln!("couldn't remove {}: {}", "index.words.txt.old", why);
+    }
+    if let Err(why) = fs::remove_file("index.matrix.txt.old") {
+	eprintln!("couldn't remove {}: {}", "index.matrix.txt.old", why);
+    }
+    fs::rename("index.words.txt", "index.words.txt.old").expect("rename failed");
+    fs::rename("index.matrix.txt", "index.matrix.txt.old").expect("rename failed");
+    fs::rename("index.words.txt.new", "index.words.txt").expect("rename failed");
+    fs::rename("index.matrix.txt.new", "index.matrix.txt").expect("rename failed");
 }
