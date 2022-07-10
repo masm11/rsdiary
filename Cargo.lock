@@ -233,6 +233,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rsdiary_search"
+version = "0.1.0"
+dependencies = [
+ "sudachi",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
