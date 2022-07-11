@@ -29,7 +29,11 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn get_token<'a>(&self, tokens: Vec<&'a str>, pos: usize) -> TokenType<'a> {
+    pub fn new() -> Parser {
+	Parser {}
+    }
+
+    fn get_token<'a>(&self, tokens: &Vec<&'a str>, pos: usize) -> TokenType<'a> {
 	if pos >= tokens.len() {
 	    return TokenType::None;
 	}
@@ -55,7 +59,7 @@ impl Parser {
     pub fn parse(&self, string: String) -> HashSet<String> {
 	let tokens: Vec<&str> = string.split_ascii_whitespace().collect();
 	let mut pos: usize = 0;
-	match self.ors(tokens, &mut pos) {
+	match self.ors(&tokens, &mut pos) {
 	    Some(r) => {
 		if pos != tokens.len() {
 		    panic!("syntax error!");
@@ -66,7 +70,7 @@ impl Parser {
 	}
     }
     
-    fn ors(&self, tokens: Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn ors(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	let ands = self.ands(tokens, &mut pos);
 	let mut ands = match ands {
@@ -80,7 +84,7 @@ impl Parser {
 		    pos += 1;
 		    match self.ors(tokens, &mut pos) {
 			Some(ors) => {
-			    // union がうまく通らん…
+			    // union
 			    for o in ors {
 				ands.insert(o);
 			    }
@@ -99,7 +103,7 @@ impl Parser {
 	}
     }
     
-    fn ands(&self, tokens: Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn ands(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	let nots = self.nots(tokens, &mut pos);
 	let mut nots = match nots {
@@ -113,7 +117,12 @@ impl Parser {
 		    pos += 1;
 		    match self.ands(tokens, &mut pos) {
 			Some(ands) => {
-			    nots = nots.intersection(&ands);
+			    // intersection
+			    for n in nots {
+				if !ands.contains(&n) {
+				    nots.remove(&n);
+				}
+			    }
 			},
 			None => {
 			    *r_pos = pos_at_and;
@@ -129,7 +138,7 @@ impl Parser {
 	}
     }
     
-    fn nots(&self, tokens: Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn nots(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 
 	match self.get_token(tokens, pos) {
@@ -160,7 +169,7 @@ impl Parser {
 	}
     }
 
-    fn parens(&self, tokens: Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn parens(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	
 	match self.get_token(tokens, pos) {
@@ -200,7 +209,7 @@ impl Parser {
 	}
     }
 
-    fn word(&self, tokens: Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn word(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	match self.get_token(tokens, pos) {
 	    TokenType::Other(tkn) => {

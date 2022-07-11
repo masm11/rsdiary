@@ -111,5 +111,6 @@ fn main() {
 	}
     }
 
-    crate::parser::Parser::parse(String::from(""))
+    let parser = crate::parser::Parser::new();
+    parser.parse(String::from(""));
 }
