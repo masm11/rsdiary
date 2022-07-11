@@ -56,7 +56,12 @@ impl Parser {
 	let tokens: Vec<&str> = string.split_ascii_whitespace().collect();
 	let mut pos: usize = 0;
 	match self.ors(tokens, &mut pos) {
-	    Some(r) => r,
+	    Some(r) => {
+		if pos != tokens.len() {
+		    panic!("syntax error!");
+		}
+		r
+	    },
 	    None => panic!("syntax error!"),
 	}
     }
