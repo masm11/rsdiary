@@ -1,3 +1,5 @@
+mod parser;
+
 use std::env;
 use std::path::PathBuf;
 use std::collections::{HashSet, HashMap};
@@ -108,4 +110,6 @@ fn main() {
 	    println!("{}", fname)
 	}
     }
+
+    crate::parser::Parser::parse(String::from(""))
 }
