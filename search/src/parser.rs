@@ -117,13 +117,7 @@ impl Parser {
 		    pos += 1;
 		    match self.ands(tokens, &mut pos) {
 			Some(ands) => {
-			    // nots = nots.intersection(&ands);
-			    // がやりたいだけなんだが…
-			    let mut its = HashSet::<String>::new();
-			    for s in  nots.intersection(&ands) {
-				its.insert(s.clone());
-			    }
-			    nots = its;
+			    nots = HashSet::from_iter(nots.intersection(&ands).cloned());
 			},
 			None => {
 			    *r_pos = pos_at_and;
