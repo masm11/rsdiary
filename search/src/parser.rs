@@ -117,12 +117,13 @@ impl Parser {
 		    pos += 1;
 		    match self.ands(tokens, &mut pos) {
 			Some(ands) => {
-			    // intersection
-			    for n in nots {
-				if !ands.contains(&n) {
-				    nots.remove(&n);
-				}
+			    // nots = nots.intersection(&ands);
+			    // がやりたいだけなんだが…
+			    let mut its = HashSet::<String>::new();
+			    for s in  nots.intersection(&ands) {
+				its.insert(s.clone());
 			    }
+			    nots = its;
 			},
 			None => {
 			    *r_pos = pos_at_and;
@@ -212,7 +213,7 @@ impl Parser {
     fn word(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	match self.get_token(tokens, pos) {
-	    TokenType::Other(tkn) => {
+	    TokenType::Other(_tkn) => {
 		return Some(HashSet::<String>::new());		// FIXME: tokenize
 	    },
 	    _ => {
