@@ -22,14 +22,12 @@ fn get_dict() -> JapaneseDictionary {
     JapaneseDictionary::from_cfg(&config).expect("Failed to read dict.")
 }
 
+/*
 fn tokenize(string: String, dict: &JapaneseDictionary) -> HashSet<String> {
     let mut set = HashSet::<String>::new();
 
-    let mut analyzers = [
-	StatefulTokenizer::new(dict, Mode::A),
-	StatefulTokenizer::new(dict, Mode::B),
-	StatefulTokenizer::new(dict, Mode::C),
-    ];
+    let mut analyzer_C = StatefulTokenizer::new(dict, Mode::C);
+
     for ana in analyzers.iter_mut() {
 	ana.reset().push_str(&string[..]);
 	ana.do_tokenize().expect("Failed to tokenize.");
@@ -42,6 +40,7 @@ fn tokenize(string: String, dict: &JapaneseDictionary) -> HashSet<String> {
     }
     set
 }
+*/
 
 fn read_index_words() -> HashMap<String, u32> {
     let path = Path::new("index.words.txt");
@@ -86,6 +85,7 @@ fn read_index_matrix() -> HashMap<String, HashSet<u32>> {
 }
 
 fn main() {
+/*
     let dict = get_dict();
 
     let index_words = read_index_words();
@@ -110,6 +110,7 @@ fn main() {
 	    println!("{}", fname)
 	}
     }
+*/
 
 /*
     let parser = crate::parser::Parser::new(&index_matrix);

@@ -1,5 +1,11 @@
+use std::path::PathBuf;
 use std::collections::HashSet;
 use std::collections::HashMap;
+use sudachi::prelude::MorphemeList;
+use sudachi::config::Config;
+use sudachi::analysis::Mode;
+use sudachi::analysis::stateful_tokenizer::StatefulTokenizer;
+use sudachi::dic::dictionary::JapaneseDictionary;
 
 /*
 ors    = ands ( `OR` ors )*
@@ -27,12 +33,18 @@ enum TokenType<'a> {
 }
 
 pub struct Parser<'a> {
+    analyzer: &'a StatefulTokenizer<&'a JapaneseDictionary>,
+    words: &'a HashMap<String, u32>,
     matrix: &'a HashMap<String, HashSet<u32>>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(words: &'a HashMap<String, u32>, matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a> {
+    pub fn new(analyzer: &'a StatefulTokenizer<&'a JapaneseDictionary>,
+	       words: &'a HashMap<String, u32>,
+	       matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a> {
 	Parser {
+	    analyzer,
+	    words,
 	    matrix,
 	}
     }
@@ -233,15 +245,27 @@ mod tests {
 	}}
     }
 
+    fn get_dict() -> JapaneseDictionary {
+	let config = Config::new(
+	    Some(PathBuf::from("./t/sudachi.rs/resources/sudachi.json")),
+	    Some(PathBuf::from("./t/sudachi.rs/resources")),
+	    Some(PathBuf::from("./t/sudachi.rs/resources/system.dic")),
+	).expect("Failed to load config file");
+	JapaneseDictionary::from_cfg(&config).expect("Failed to read dict.")
+    }
+
     #[test]
     fn simple() {
+	let dict = get_dict();
+	let mut analyzer = StatefulTokenizer::new(&dict, Mode::C);
+
 	let mut words = HashMap::<String, u32>::new();
 	words.insert(String::from("今日"), 1);
 	words.insert(String::from("は"), 2);
 	let mut mat = HashMap::<String, HashSet<u32>>::new();
 	mat.insert(String::from("kyoha.txt"), set!{1, 2});
 	mat.insert(String::from("ha.txt"), set!{1});
-	let mut parser = Parser::new(&words, &mat);
+	let mut parser = Parser::new(&analyzer, &words, &mat);
 	let result = parser.parse(String::from("今日は"));
 	assert_eq!(result, set!{String::from("kyoha.txt")});
     }
