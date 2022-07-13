@@ -111,6 +111,8 @@ fn main() {
 	}
     }
 
-    let parser = crate::parser::Parser::new();
+/*
+    let parser = crate::parser::Parser::new(&index_matrix);
     parser.parse(String::from(""));
+*/
 }

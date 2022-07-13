@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::collections::HashMap;
 
 /*
 ors    = ands ( `OR` ors )*
@@ -25,15 +26,18 @@ enum TokenType<'a> {
     Other(&'a str),
 }
 
-pub struct Parser {
+pub struct Parser<'a> {
+    matrix: &'a HashMap<String, HashSet<u32>>,
 }
 
-impl Parser {
-    pub fn new() -> Parser {
-	Parser {}
+impl<'a> Parser<'a> {
+    pub fn new(words: &'a HashMap<String, u32>, matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a> {
+	Parser {
+	    matrix,
+	}
     }
 
-    fn get_token<'a>(&self, tokens: &Vec<&'a str>, pos: usize) -> TokenType<'a> {
+    fn get_token<'b>(&self, tokens: &Vec<&'b str>, pos: usize) -> TokenType<'b> {
 	if pos >= tokens.len() {
 	    return TokenType::None;
 	}
@@ -214,5 +218,31 @@ impl Parser {
 		return None;
 	    },
 	}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! set {
+	($( $x: expr ), *) => {{
+	    let mut _set = ::std::collections::HashSet::new();
+	    $( _set.insert($x); )*
+	    _set
+	}}
+    }
+
+    #[test]
+    fn simple() {
+	let mut words = HashMap::<String, u32>::new();
+	words.insert(String::from("今日"), 1);
+	words.insert(String::from("は"), 2);
+	let mut mat = HashMap::<String, HashSet<u32>>::new();
+	mat.insert(String::from("kyoha.txt"), set!{1, 2});
+	mat.insert(String::from("ha.txt"), set!{1});
+	let mut parser = Parser::new(&words, &mat);
+	let result = parser.parse(String::from("今日は"));
+	assert_eq!(result, set!{String::from("kyoha.txt")});
     }
 }
