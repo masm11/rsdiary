@@ -33,13 +33,13 @@ enum TokenType<'a> {
 }
 
 pub struct Parser<'a> {
-    analyzer: &'a StatefulTokenizer<&'a JapaneseDictionary>,
+    analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
     words: &'a HashMap<String, u32>,
     matrix: &'a HashMap<String, HashSet<u32>>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(analyzer: &'a StatefulTokenizer<&'a JapaneseDictionary>,
+    pub fn new(analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
 	       words: &'a HashMap<String, u32>,
 	       matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a> {
 	Parser {
@@ -72,7 +72,7 @@ impl<'a> Parser<'a> {
 	return TokenType::Other(s);
     }
     
-    pub fn parse(&self, string: String) -> HashSet<String> {
+    pub fn parse(&mut self, string: String) -> HashSet<String> {
 	let tokens: Vec<&str> = string.split_ascii_whitespace().collect();
 	let mut pos: usize = 0;
 	match self.ors(&tokens, &mut pos) {
@@ -86,7 +86,7 @@ impl<'a> Parser<'a> {
 	}
     }
     
-    fn ors(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn ors(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	let ands = self.ands(tokens, &mut pos);
 	let mut ands = match ands {
@@ -119,7 +119,7 @@ impl<'a> Parser<'a> {
 	}
     }
     
-    fn ands(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn ands(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	let nots = self.nots(tokens, &mut pos);
 	let mut nots = match nots {
@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
 	}
     }
     
-    fn nots(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn nots(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 
 	match self.get_token(tokens, pos) {
@@ -181,7 +181,7 @@ impl<'a> Parser<'a> {
 	}
     }
 
-    fn parens(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn parens(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	
 	match self.get_token(tokens, pos) {
@@ -221,11 +221,21 @@ impl<'a> Parser<'a> {
 	}
     }
 
-    fn word(&self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
+    fn word(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
 	let mut pos = *r_pos;
 	match self.get_token(tokens, pos) {
-	    TokenType::Other(_tkn) => {
-		return Some(HashSet::<String>::new());		// FIXME: tokenize
+	    TokenType::Other(tkn) => {
+		self.analyzer.reset().push_str(tkn);
+		self.analyzer.do_tokenize().expect("Failed to tokenize.");
+		let mut morphs = MorphemeList::empty(self.analyzer.dict_clone());
+		morphs.collect_results(self.analyzer).expect("Failed to collect results.");
+		let mut set = HashSet::<String>::new();
+		for m in morphs.iter() {
+		    // 何を set に突っ込む??
+		    set.insert(m.surface().to_string());
+		    set.insert(m.normalized_form().to_string());
+		}
+		return Some(set);
 	    },
 	    _ => {
 		return None;
@@ -266,7 +276,7 @@ mod tests {
 	let mut mat = HashMap::<String, HashSet<u32>>::new();
 	mat.insert(String::from("kyoha.txt"), set!{1, 2});
 	mat.insert(String::from("ha.txt"), set!{1});
-	let mut parser = Parser::new(&analyzer, &words, &mat);
+	let mut parser = Parser::new(&mut analyzer, &words, &mat);
 	let result = parser.parse(String::from("今日は"));
 	assert_eq!(result, set!{String::from("kyoha.txt")});
     }
