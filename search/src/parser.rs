@@ -225,10 +225,15 @@ impl<'a> Parser<'a> {
 	let mut pos = *r_pos;
 	match self.get_token(tokens, pos) {
 	    TokenType::Other(tkn) => {
-		self.analyzer.reset().push_str(tkn);
-		self.analyzer.do_tokenize().expect("Failed to tokenize.");
+		self.analyzer
+		    .reset()
+		    .push_str(tkn);
+		self.analyzer
+		    .do_tokenize()
+		    .expect("Failed to tokenize.");
 		let mut morphs = MorphemeList::empty(self.analyzer.dict_clone());
-		morphs.collect_results(self.analyzer).expect("Failed to collect results.");
+		morphs.collect_results(self.analyzer)
+		    .expect("Failed to collect results.");
 		let mut set = HashSet::<String>::new();
 		for m in morphs.iter() {
 		    set.insert(m.surface().to_string());
