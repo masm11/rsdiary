@@ -231,9 +231,7 @@ impl<'a> Parser<'a> {
 		morphs.collect_results(self.analyzer).expect("Failed to collect results.");
 		let mut set = HashSet::<String>::new();
 		for m in morphs.iter() {
-		    // 何を set に突っ込む??
 		    set.insert(m.surface().to_string());
-		    set.insert(m.normalized_form().to_string());
 		}
 		return Some(set);
 	    },
