@@ -155,12 +155,13 @@ impl<'a> Parser<'a> {
 	match self.get_token(tokens, pos) {
 	    TokenType::Not => {
 		pos += 1;
-		let nots = self.nots(tokens, &mut pos);
+		let mut nots = self.nots(tokens, &mut pos);
 		match nots {
-		    Some(nots) => {
-			// nots = nots.intersection(&i_nots);	// FIXME: all - nots
+		    Some(some_nots) => {
+			let all = HashSet::from_iter(self.matrix.keys().cloned());
+			let res = HashSet::from_iter(all.difference(&some_nots).cloned());
 			*r_pos = pos;
-			return Some(nots);
+			return Some(res);
 		    },
 		    None => return None,
 		}
