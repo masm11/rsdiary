@@ -255,8 +255,16 @@ impl<'a> Parser<'a> {
 		    .expect("Failed to collect results.");
 		let mut set = HashSet::<String>::new();
 		for m in morphs.iter() {
-		    println!("{}", m.surface().to_string());
-		    set.insert(m.surface().to_string());
+		    let s = m.surface().to_string();
+		    let fns = match self.words.get(s) {
+			Some(word_id) => {
+			    match self.imat.get(word_id) {
+				Some(fns) => fns,
+				None => HashSet::<&String>::new(),	// 単語は知ってるけど、該当文書がない
+			    }
+			},
+			None => HashSet::<&String>::new(),	// 未知語
+		    };
 		}
 		pos += 1;
 		*r_pos = pos;
