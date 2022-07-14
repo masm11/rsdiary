@@ -36,16 +36,35 @@ pub struct Parser<'a> {
     analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
     words: &'a HashMap<String, u32>,
     matrix: &'a HashMap<String, HashSet<u32>>,
+    imat: HashMap<u32, HashSet<&'a String>>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
 	       words: &'a HashMap<String, u32>,
 	       matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a> {
+	let mut imat = HashMap::<u32, HashSet<&String>>::new();
+	for (fname, word_ids) in matrix {
+	    for word_id in word_ids {
+		let mut set = match imat.get_mut(word_id) {
+		    Some(set) => set,
+		    None => {
+			imat.insert(*word_id, HashSet::<&String>::new());
+			match imat.get_mut(word_id) {
+			    Some(set) => set,
+			    None => panic!("why?"),
+			}
+		    }
+		};
+		set.insert(fname);
+	    }
+	}
+
 	Parser {
 	    analyzer,
 	    words,
 	    matrix,
+	    imat,
 	}
     }
 
@@ -78,11 +97,11 @@ impl<'a> Parser<'a> {
 	match self.ors(&tokens, &mut pos) {
 	    Some(r) => {
 		if pos != tokens.len() {
-		    panic!("syntax error!");
+		    panic!("syntax error! (length not match, {}, {})", pos, tokens.len());
 		}
 		r
 	    },
-	    None => panic!("syntax error!"),
+	    None => panic!("syntax error! (parse error)"),
 	}
     }
     
@@ -236,8 +255,11 @@ impl<'a> Parser<'a> {
 		    .expect("Failed to collect results.");
 		let mut set = HashSet::<String>::new();
 		for m in morphs.iter() {
+		    println!("{}", m.surface().to_string());
 		    set.insert(m.surface().to_string());
 		}
+		pos += 1;
+		*r_pos = pos;
 		return Some(set);
 	    },
 	    _ => {
@@ -261,9 +283,9 @@ mod tests {
 
     fn get_dict() -> JapaneseDictionary {
 	let config = Config::new(
-	    Some(PathBuf::from("./t/sudachi.rs/resources/sudachi.json")),
-	    Some(PathBuf::from("./t/sudachi.rs/resources")),
-	    Some(PathBuf::from("./t/sudachi.rs/resources/system.dic")),
+	    Some(PathBuf::from("../t/sudachi.rs/resources/sudachi.json")),
+	    Some(PathBuf::from("../t/sudachi.rs/resources")),
+	    Some(PathBuf::from("../t/sudachi.rs/resources/system.dic")),
 	).expect("Failed to load config file");
 	JapaneseDictionary::from_cfg(&config).expect("Failed to read dict.")
     }
