@@ -36,27 +36,27 @@ pub struct Parser<'a> {
     analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
     words: &'a HashMap<String, u32>,
     matrix: &'a HashMap<String, HashSet<u32>>,
-    imat: HashMap<u32, HashSet<&'a String>>,
+    imat: HashMap<u32, HashSet<String>>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
 	       words: &'a HashMap<String, u32>,
 	       matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a> {
-	let mut imat = HashMap::<u32, HashSet<&String>>::new();
+	let mut imat = HashMap::<u32, HashSet<String>>::new();
 	for (fname, word_ids) in matrix {
 	    for word_id in word_ids {
 		let mut set = match imat.get_mut(word_id) {
 		    Some(set) => set,
 		    None => {
-			imat.insert(*word_id, HashSet::<&String>::new());
+			imat.insert(*word_id, HashSet::<String>::new());
 			match imat.get_mut(word_id) {
 			    Some(set) => set,
 			    None => panic!("why?"),
 			}
 		    }
 		};
-		set.insert(fname);
+		set.insert(fname.clone());
 	    }
 	}
 
@@ -177,7 +177,7 @@ impl<'a> Parser<'a> {
 		let mut nots = self.nots(tokens, &mut pos);
 		match nots {
 		    Some(some_nots) => {
-			let all = HashSet::from_iter(self.matrix.keys().cloned());
+			let all = self.all();
 			let res = HashSet::from_iter(all.difference(&some_nots).cloned());
 			*r_pos = pos;
 			return Some(res);
@@ -253,27 +253,33 @@ impl<'a> Parser<'a> {
 		let mut morphs = MorphemeList::empty(self.analyzer.dict_clone());
 		morphs.collect_results(self.analyzer)
 		    .expect("Failed to collect results.");
-		let mut set = HashSet::<String>::new();
+		let mut retval = self.all();
 		for m in morphs.iter() {
 		    let s = m.surface().to_string();
-		    let fns = match self.words.get(s) {
+		    let empty = HashSet::<String>::new();
+		    let fns = match self.words.get(&s) {
 			Some(word_id) => {
 			    match self.imat.get(word_id) {
 				Some(fns) => fns,
-				None => HashSet::<&String>::new(),	// 単語は知ってるけど、該当文書がない
+				None => &empty,	// 単語は知ってるけど、該当文書がない
 			    }
 			},
-			None => HashSet::<&String>::new(),	// 未知語
+			None => &empty,	// 未知語
 		    };
+		    retval = HashSet::from_iter(retval.intersection(fns).cloned());
 		}
 		pos += 1;
 		*r_pos = pos;
-		return Some(set);
+		return Some(retval);
 	    },
 	    _ => {
 		return None;
 	    },
 	}
+    }
+
+    fn all(&self) -> HashSet<String> {
+	HashSet::from_iter(self.matrix.keys().cloned())
     }
 }
 
