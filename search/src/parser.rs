@@ -32,17 +32,17 @@ enum TokenType<'a> {
     Other(&'a str),
 }
 
-pub struct Parser<'a> {
-    analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
+pub struct Parser<'a, 'b> {
+    analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>,
     words: &'a HashMap<String, u32>,
     matrix: &'a HashMap<String, HashSet<u32>>,
     imat: HashMap<u32, HashSet<String>>,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>,
+impl<'a, 'b> Parser<'a, 'b> {
+    pub fn new(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>,
 	       words: &'a HashMap<String, u32>,
-	       matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a> {
+	       matrix: &'a HashMap<String, HashSet<u32>>) -> Parser<'a, 'b> {
 	let mut imat = HashMap::<u32, HashSet<String>>::new();
 	for (fname, word_ids) in matrix {
 	    for word_id in word_ids {
@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
 	}
     }
 
-    fn get_token<'b>(&self, tokens: &Vec<&'b str>, pos: usize) -> TokenType<'b> {
+    fn get_token<'c>(&self, tokens: &Vec<&'c str>, pos: usize) -> TokenType<'c> {
 	if pos >= tokens.len() {
 	    return TokenType::None;
 	}
@@ -305,18 +305,42 @@ mod tests {
     }
 
     #[test]
-    fn simple() {
+    fn test<'b>() {
 	let dict = get_dict();
 	let mut analyzer = StatefulTokenizer::new(&dict, Mode::C);
-
+	simple(&mut analyzer);
+	and(&mut analyzer);
+    }
+    
+    fn simple<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
 	let mut words = HashMap::<String, u32>::new();
 	words.insert(String::from("今日"), 1);
 	words.insert(String::from("は"), 2);
 	let mut mat = HashMap::<String, HashSet<u32>>::new();
 	mat.insert(String::from("kyoha.txt"), set!{1, 2});
 	mat.insert(String::from("ha.txt"), set!{1});
-	let mut parser = Parser::new(&mut analyzer, &words, &mat);
+	let mut parser = Parser::new(analyzer, &words, &mat);
 	let result = parser.parse(String::from("今日は"));
+	
 	assert_eq!(result, set!{String::from("kyoha.txt")});
+    }
+
+    fn and<'a>(analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>) {
+	let mut words = HashMap::<String, u32>::new();
+	words.insert(String::from("今日"), 1);
+	words.insert(String::from("は"), 2);
+	words.insert(String::from("良い"), 3);
+	words.insert(String::from("天気"), 4);
+	words.insert(String::from("でし"), 5);
+	words.insert(String::from("です"), 6);
+	words.insert(String::from("た"), 7);
+	words.insert(String::from("悪い"), 8);
+	let mut mat = HashMap::<String, HashSet<u32>>::new();
+	mat.insert(String::from("bad.txt"), set!{1, 2, 8, 4, 5, 6, 7});
+	mat.insert(String::from("good.txt"), set!{1, 2, 3, 4, 5, 6, 7});
+	let mut parser = Parser::new(analyzer, &words, &mat);
+	let result = parser.parse(String::from("今日 AND 良い AND 天気"));
+
+	assert_eq!(result, set!{String::from("good.txt")});
     }
 }
