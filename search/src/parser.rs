@@ -385,15 +385,14 @@ mod tests {
 	assert_eq!(result, set!{String::from("good.txt"), String::from("bad.txt")});
     }
 
-    fn complex1<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
-	let mut words = HashMap::<String, u32>::new();
+    fn get_complex_index(words: &mut HashMap<String, u32>, mat: &mut HashMap<String, HashSet<u32>>) {
 	words.insert(String::from("優子"), 1);
 	words.insert(String::from("愛子"), 2);
 	words.insert(String::from("涼子"), 3);
 	words.insert(String::from("恵子"), 4);
 	words.insert(String::from("真知子"), 5);
 	words.insert(String::from("和美"), 6);
-	let mut mat = HashMap::<String, HashSet<u32>>::new();
+
 	for i6 in 0..2 {
 	    for i5 in 0..2 {
 		for i4 in 0..2 {
@@ -416,6 +415,12 @@ mod tests {
 		}
 	    }
 	}
+    }
+
+    fn complex1<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
+	let mut words = HashMap::<String, u32>::new();
+	let mut mat = HashMap::<String, HashSet<u32>>::new();
+	get_complex_index(&mut words, &mut mat);
 	let mut parser = Parser::new(analyzer, &words, &mat);
 	let result = parser.parse(String::from("( 優子 AND 恵子 ) ( 愛子 OR 涼子 )"));
 
