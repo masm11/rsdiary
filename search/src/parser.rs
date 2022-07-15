@@ -69,7 +69,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 	}
     }
 
-    fn get_token<'c>(&self, tokens: &Vec<&'c str>, pos: usize) -> TokenType<'c> {
+    fn get_token<'z>(&self, tokens: &Vec<&'z str>, pos: usize) -> TokenType<'z> {
 	if pos >= tokens.len() {
 	    return TokenType::None;
 	}
