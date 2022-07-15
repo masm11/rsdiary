@@ -310,6 +310,7 @@ mod tests {
 	let mut analyzer = StatefulTokenizer::new(&dict, Mode::C);
 	simple(&mut analyzer);
 	and(&mut analyzer);
+	or(&mut analyzer);
     }
     
     fn simple<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
@@ -325,7 +326,7 @@ mod tests {
 	assert_eq!(result, set!{String::from("kyoha.txt")});
     }
 
-    fn and<'a>(analyzer: &'a mut StatefulTokenizer<&'a JapaneseDictionary>) {
+    fn and<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
 	let mut words = HashMap::<String, u32>::new();
 	words.insert(String::from("今日"), 1);
 	words.insert(String::from("は"), 2);
@@ -342,5 +343,24 @@ mod tests {
 	let result = parser.parse(String::from("今日 AND 良い AND 天気"));
 
 	assert_eq!(result, set!{String::from("good.txt")});
+    }
+
+    fn or<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
+	let mut words = HashMap::<String, u32>::new();
+	words.insert(String::from("今日"), 1);
+	words.insert(String::from("は"), 2);
+	words.insert(String::from("良い"), 3);
+	words.insert(String::from("天気"), 4);
+	words.insert(String::from("でし"), 5);
+	words.insert(String::from("です"), 6);
+	words.insert(String::from("た"), 7);
+	words.insert(String::from("悪い"), 8);
+	let mut mat = HashMap::<String, HashSet<u32>>::new();
+	mat.insert(String::from("bad.txt"), set!{1, 2, 8, 4, 5, 6, 7});
+	mat.insert(String::from("good.txt"), set!{1, 2, 3, 4, 5, 6, 7});
+	let mut parser = Parser::new(analyzer, &words, &mat);
+	let result = parser.parse(String::from("今日 AND ( 良い OR 悪い ) AND 天気"));
+
+	assert_eq!(result, set!{String::from("good.txt"), String::from("bad.txt")});
     }
 }
