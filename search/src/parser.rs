@@ -334,6 +334,7 @@ mod tests {
 	complex1(&mut analyzer);
 	complex2(&mut analyzer);
 	complex3(&mut analyzer);
+	complex4(&mut analyzer);
     }
     
     fn simple<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
@@ -456,6 +457,21 @@ mod tests {
 	let result = parser.parse(String::from("NOT ( 優子 AND 恵子 ) AND ( 愛子 OR 涼子 )"));
 
 	let fids_vec = vec![2, 3, 4, 5, 6, 7, 10, 12, 14, 18, 19, 20, 21, 22, 23, 26, 28, 30, 34, 35, 36, 37, 38, 39, 42, 44, 46, 50, 51, 52, 53, 54, 55, 58, 60, 62];
+
+	let fnames_iter = fids_vec.iter().map(|id| format!("file{}.txt", id));
+	let fnames = HashSet::from_iter(fnames_iter);
+
+	assert_eq!(result, fnames);
+    }
+
+    fn complex4<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
+	let mut words = HashMap::<String, u32>::new();
+	let mut mat = HashMap::<String, HashSet<u32>>::new();
+	get_complex_index(&mut words, &mut mat);
+	let mut parser = Parser::new(analyzer, &words, &mat);
+	let result = parser.parse(String::from("( ( 優子 OR 恵子 ) ( 愛子 OR 涼子 ) ) ( 真知子 AND 和美 )"));
+
+	let fids_vec = vec![51, 53, 55, 58, 59, 60, 61, 62, 63];
 
 	let fnames_iter = fids_vec.iter().map(|id| format!("file{}.txt", id));
 	let fnames = HashSet::from_iter(fnames_iter);
