@@ -10,6 +10,7 @@ use sudachi::dic::dictionary::JapaneseDictionary;
 /*
 ors    = ands ( `OR` ors )*
 ands   = nots ( `AND` ands )*
+       | nots ( ands )*           ここの文法、どうしたらいいのかなぁ
 nots   = `NOT` nots
        | parens
 parens = `(` ors `)`
@@ -160,9 +161,28 @@ impl<'a, 'b> Parser<'a, 'b> {
 			},
 		    };
 		},
-		_ => {
+		TokenType::Or => {
 		    *r_pos = pos;
 		    return Some(nots);
+		},
+		TokenType::Rpar => {
+		    *r_pos = pos;
+		    return Some(nots);
+		},
+		TokenType::None => {
+		    *r_pos = pos;
+		    return Some(nots);
+		},
+		_ => {
+		    match self.ands(tokens, &mut pos) {
+			Some(ands) => {
+			    nots = HashSet::from_iter(nots.intersection(&ands).cloned());
+			},
+			None => {
+			    *r_pos = pos;
+			    return Some(nots);
+			},
+		    };
 		}
 	    }
 	}
@@ -311,6 +331,7 @@ mod tests {
 	simple(&mut analyzer);
 	and(&mut analyzer);
 	or(&mut analyzer);
+	complex1(&mut analyzer);
     }
     
     fn simple<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
@@ -362,5 +383,46 @@ mod tests {
 	let result = parser.parse(String::from("今日 AND ( 良い OR 悪い ) AND 天気"));
 
 	assert_eq!(result, set!{String::from("good.txt"), String::from("bad.txt")});
+    }
+
+    fn complex1<'a, 'b>(analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>) {
+	let mut words = HashMap::<String, u32>::new();
+	words.insert(String::from("優子"), 1);
+	words.insert(String::from("愛子"), 2);
+	words.insert(String::from("涼子"), 3);
+	words.insert(String::from("恵子"), 4);
+	words.insert(String::from("真知子"), 5);
+	words.insert(String::from("和美"), 6);
+	let mut mat = HashMap::<String, HashSet<u32>>::new();
+	for i6 in 0..2 {
+	    for i5 in 0..2 {
+		for i4 in 0..2 {
+		    for i3 in 0..2 {
+			for i2 in 0..2 {
+			    for i1 in 0..2 {
+				let mut set = HashSet::<u32>::new();
+				if i1 == 1 { set.insert(1); }	// 優子 (1)
+				if i2 == 1 { set.insert(2); }	// 愛子 (2)
+				if i3 == 1 { set.insert(3); }	// 涼子 (4)
+				if i4 == 1 { set.insert(4); }	// 恵子 (8)
+				if i5 == 1 { set.insert(5); }	// 真知子 (16)
+				if i6 == 1 { set.insert(6); }	// 和美 (32)
+				let no = 32 * i6 + 16 * i5 + 8 * i4 + 4 * i3 + 2 * i2 + 1 * i1;
+				let fname = format!("file{}.txt", no);
+				mat.insert(fname, set);
+			    }
+			}
+		    }
+		}
+	    }
+	}
+	let mut parser = Parser::new(analyzer, &words, &mat);
+	let result = parser.parse(String::from("( 優子 AND 恵子 ) ( 愛子 OR 涼子 )"));
+
+	let fids_vec = vec![11, 13, 15, 27, 29, 31, 43, 45, 47, 59, 61, 63];
+	let fnames_iter = fids_vec.iter().map(|id| format!("file{}.txt", id));
+	let fnames = HashSet::from_iter(fnames_iter);
+
+	assert_eq!(result, fnames);
     }
 }
