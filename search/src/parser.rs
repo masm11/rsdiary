@@ -120,10 +120,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 		    pos += 1;
 		    match self.ors(tokens, &mut pos) {
 			Some(ors) => {
-			    // union
-			    for o in ors {
-				ands.insert(o);
-			    }
+			    ands = HashSet::from_iter(ands.union(&ors).cloned());
 			},
 			None => {
 			    *r_pos = pos_at_or;
