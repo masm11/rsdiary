@@ -194,7 +194,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 	match self.get_token(tokens, pos) {
 	    TokenType::Not => {
 		pos += 1;
-		let mut nots = self.nots(tokens, &mut pos);
+		let nots = self.nots(tokens, &mut pos);
 		match nots {
 		    Some(some_nots) => {
 			let all = self.all();
