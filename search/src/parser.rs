@@ -33,6 +33,11 @@ enum TokenType<'a> {
     Other(&'a str),
 }
 
+enum RetVal {
+    Tree(HashSet<String>, usize),
+    None,
+}
+
 pub struct Parser<'a, 'b> {
     analyzer: &'a mut StatefulTokenizer<&'b JapaneseDictionary>,
     words: &'a HashMap<String, u32>,
@@ -94,90 +99,83 @@ impl<'a, 'b> Parser<'a, 'b> {
     
     pub fn parse(&mut self, string: String) -> HashSet<String> {
 	let tokens: Vec<&str> = string.split_ascii_whitespace().collect();
-	let mut pos: usize = 0;
-	match self.ors(&tokens, &mut pos) {
-	    Some(r) => {
-		if pos != tokens.len() {
-		    panic!("syntax error! (length not match, {}, {})", pos, tokens.len());
+	match self.ors(&tokens, 0) {
+	    RetVal::Tree(r, rpos) => {
+		if rpos != tokens.len() {
+		    panic!("syntax error! (length not match, {}, {})", rpos, tokens.len());
 		}
 		r
 	    },
-	    None => panic!("syntax error! (parse error)"),
+	    RetVal::None => panic!("syntax error! (parse error)"),
 	}
     }
     
-    fn ors(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
-	let mut pos = *r_pos;
-	let ands = self.ands(tokens, &mut pos);
-	let mut ands = match ands {
-	    Some(ands) => ands,
-	    None => return None,
+    fn ors(&mut self, tokens: &Vec<&str>, pos: usize) -> RetVal {
+	let ands = self.ands(tokens, pos);
+	let (mut ands, mut pos) = match ands {
+	    RetVal::Tree(ands, pos) => (ands, pos),
+	    RetVal::None => return RetVal::None,
 	};
 	loop {
 	    match self.get_token(tokens, pos) {
 		TokenType::Or => {
 		    let pos_at_or = pos;
 		    pos += 1;
-		    match self.ors(tokens, &mut pos) {
-			Some(ors) => {
+		    match self.ors(tokens, pos) {
+			RetVal::Tree(ors, rpos) => {
 			    ands = HashSet::from_iter(ands.union(&ors).cloned());
+			    pos = rpos;
 			},
-			None => {
-			    *r_pos = pos_at_or;
-			    return Some(ands);
+			RetVal::None => {
+			    return RetVal::Tree(ands, pos_at_or);
 			},
 		    };
 		},
 		_ => {
-		    *r_pos = pos;
-		    return Some(ands);
+		    return RetVal::Tree(ands, pos);
 		}
 	    }
 	}
     }
     
-    fn ands(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
-	let mut pos = *r_pos;
-	let nots = self.nots(tokens, &mut pos);
-	let mut nots = match nots {
-	    Some(nots) => nots,
-	    None => return None,
+    fn ands(&mut self, tokens: &Vec<&str>, pos: usize) -> RetVal {
+	let nots = self.nots(tokens, pos);
+	let (mut nots, mut pos) = match nots {
+	    RetVal::Tree(nots, pos) => (nots, pos),
+	    RetVal::None => return RetVal::None,
 	};
 	loop {
 	    match self.get_token(tokens, pos) {
 		TokenType::And => {
 		    let pos_at_and = pos;
 		    pos += 1;
-		    match self.ands(tokens, &mut pos) {
-			Some(ands) => {
+		    match self.ands(tokens, pos) {
+			RetVal::Tree(ands, rpos) => {
 			    nots = HashSet::from_iter(nots.intersection(&ands).cloned());
+			    pos = rpos;
 			},
-			None => {
-			    *r_pos = pos_at_and;
-			    return Some(nots);
+			RetVal::None => {
+			    return RetVal::Tree(nots, pos_at_and);
 			},
 		    };
 		},
 		TokenType::Or => {
-		    *r_pos = pos;
-		    return Some(nots);
+		    return RetVal::Tree(nots, pos);
 		},
 		TokenType::Rpar => {
-		    *r_pos = pos;
-		    return Some(nots);
+		    return RetVal::Tree(nots, pos);
 		},
 		TokenType::None => {
-		    *r_pos = pos;
-		    return Some(nots);
+		    return RetVal::Tree(nots, pos);
 		},
 		_ => {
-		    match self.ands(tokens, &mut pos) {
-			Some(ands) => {
+		    match self.ands(tokens, pos) {
+			RetVal::Tree(ands, rpos) => {
 			    nots = HashSet::from_iter(nots.intersection(&ands).cloned());
+			    pos = rpos;
 			},
-			None => {
-			    *r_pos = pos;
-			    return Some(nots);
+			RetVal::None => {
+			    return RetVal::Tree(nots, pos);
 			},
 		    };
 		}
@@ -185,80 +183,70 @@ impl<'a, 'b> Parser<'a, 'b> {
 	}
     }
     
-    fn nots(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
-	let mut pos = *r_pos;
-
+    fn nots(&mut self, tokens: &Vec<&str>, mut pos: usize) -> RetVal {
 	match self.get_token(tokens, pos) {
 	    TokenType::Not => {
 		pos += 1;
-		let nots = self.nots(tokens, &mut pos);
+		let nots = self.nots(tokens, pos);
 		match nots {
-		    Some(some_nots) => {
+		    RetVal::Tree(some_nots, rpos) => {
 			let all = self.all();
 			let res = HashSet::from_iter(all.difference(&some_nots).cloned());
-			*r_pos = pos;
-			return Some(res);
+			return RetVal::Tree(res, rpos);
 		    },
-		    None => return None,
+		    RetVal::None => return RetVal::None,
 		}
 	    },
 	    _ => {
-		let parens = self.parens(tokens, &mut pos);
-		match parens {
-		    Some(_) => {
-			*r_pos = pos;
-			return parens;
+		match self.parens(tokens, pos) {
+		    RetVal::Tree(parens, pos) => {
+			return RetVal::Tree(parens, pos);
 		    },
 		    _ => {
-			return None;
+			return RetVal::None;
 		    }
 		}
 	    },
 	}
     }
 
-    fn parens(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
-	let mut pos = *r_pos;
-	
+    fn parens(&mut self, tokens: &Vec<&str>, mut pos: usize) -> RetVal {
 	match self.get_token(tokens, pos) {
 	    TokenType::Lpar => {
 		pos += 1;
-		let ors = self.ors(tokens, &mut pos);
+		let ors = self.ors(tokens, pos);
 		match ors {
-		    Some(_) => {
+		    RetVal::Tree(ors, mut pos) => {
 			match self.get_token(tokens, pos) {
 			    TokenType::Rpar => {
 				pos += 1;
-				*r_pos = pos;
-				return ors;
+				return RetVal::Tree(ors, pos);
 			    },
 			    _ => {
-				return None;
+				return RetVal::None;
 			    },
 			}
 		    },
-		    None => {
-			return None;
+		    RetVal::None => {
+			return RetVal::None;
 		    },
 		}
 	    },
 	    _ => {
-		let word = self.word(tokens, &mut pos);
+		let word = self.word(tokens, pos);
 		match word {
-		    Some(_) => {
-			*r_pos = pos;
+		    RetVal::Tree(_, _) => {
 			return word;
 		    },
 		    _ => {
-			return None;
+			return RetVal::None;
 		    }
 		}
 	    },
 	}
     }
 
-    fn word(&mut self, tokens: &Vec<&str>, r_pos: &mut usize) -> Option<HashSet<String>> {
-	let mut pos = *r_pos;
+    fn word(&mut self, tokens: &Vec<&str>, mut pos: usize) -> RetVal {
 	match self.get_token(tokens, pos) {
 	    TokenType::Other(tkn) => {
 		self.analyzer
@@ -286,11 +274,10 @@ impl<'a, 'b> Parser<'a, 'b> {
 		    retval = HashSet::from_iter(retval.intersection(fns).cloned());
 		}
 		pos += 1;
-		*r_pos = pos;
-		return Some(retval);
+		return RetVal::Tree(retval, pos);
 	    },
 	    _ => {
-		return None;
+		return RetVal::None;
 	    },
 	}
     }
