@@ -47,7 +47,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 	let mut imat = HashMap::<u32, HashSet<String>>::new();
 	for (fname, word_ids) in matrix {
 	    for word_id in word_ids {
-		let mut set = match imat.get_mut(word_id) {
+		let set = match imat.get_mut(word_id) {
 		    Some(set) => set,
 		    None => {
 			imat.insert(*word_id, HashSet::<String>::new());
