@@ -8,9 +8,9 @@ use sudachi::analysis::stateful_tokenizer::StatefulTokenizer;
 use sudachi::dic::dictionary::JapaneseDictionary;
 
 /*
-ors    = ands ( `OR` ors )*
-ands   = nots ( `AND` ands )*
-       | nots ( ands )*           ここの文法、どうしたらいいのかなぁ
+ors    = ands ( `OR` ands )*
+ands   = nots ( `AND` nots )*
+       | nots ( nots )*           ここの文法、どうしたらいいのかなぁ
 nots   = `NOT` nots
        | parens
 parens = `(` ors `)`
@@ -121,9 +121,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 		TokenType::Or => {
 		    let pos_at_or = pos;
 		    pos += 1;
-		    match self.ors(tokens, pos) {
-			RetVal::Tree(ors, rpos) => {
-			    ands = HashSet::from_iter(ands.union(&ors).cloned());
+		    match self.ands(tokens, pos) {
+			RetVal::Tree(rands, rpos) => {
+			    ands = HashSet::from_iter(ands.union(&rands).cloned());
 			    pos = rpos;
 			},
 			RetVal::None => {
@@ -133,7 +133,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 		},
 		_ => {
 		    return RetVal::Tree(ands, pos);
-		}
+		},
 	    }
 	}
     }
@@ -149,9 +149,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 		TokenType::And => {
 		    let pos_at_and = pos;
 		    pos += 1;
-		    match self.ands(tokens, pos) {
-			RetVal::Tree(ands, rpos) => {
-			    nots = HashSet::from_iter(nots.intersection(&ands).cloned());
+		    match self.nots(tokens, pos) {
+			RetVal::Tree(rnots, rpos) => {
+			    nots = HashSet::from_iter(nots.intersection(&rnots).cloned());
 			    pos = rpos;
 			},
 			RetVal::None => {
@@ -169,9 +169,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 		    return RetVal::Tree(nots, pos);
 		},
 		_ => {
-		    match self.ands(tokens, pos) {
-			RetVal::Tree(ands, rpos) => {
-			    nots = HashSet::from_iter(nots.intersection(&ands).cloned());
+		    match self.nots(tokens, pos) {
+			RetVal::Tree(rnots, rpos) => {
+			    nots = HashSet::from_iter(nots.intersection(&rnots).cloned());
 			    pos = rpos;
 			},
 			RetVal::None => {
