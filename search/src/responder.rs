@@ -1,15 +1,32 @@
 use std::collections::HashSet;
+use std::path::Path;
 use serde::Serialize;
 use tera::{Context, Tera};
 
 #[derive(Serialize)]
 struct ResultFile {
     path: String,
-/*
     url: String,
+/*
     title: String,
     summary: String,
 */
+}
+
+impl ResultFile {
+    fn new(path: String) -> Self {
+	let url = Self::make_url(&path);
+	Self {
+	    path,
+	    url,
+	}
+    }
+    fn make_url(path: &String) -> String {
+	let p = Path::new(path);
+	let name = p.file_stem().unwrap();
+	let name = name.to_str().unwrap();
+	format!("http://localhost/{}", name)
+    }
 }
 
 struct Responder {
@@ -24,11 +41,10 @@ impl Responder {
 	    Ok(t) => t,
 	    Err(e) => return format!("{:?}", e)
 	};
+
 	let mut list = Vec::<ResultFile>::new();
 	for f in files {
-	    let rf = ResultFile {
-		path: f,
-	    };
+	    let rf = ResultFile::new(f);
 	    list.push(rf);
 	}
 	let mut ctxt = Context::new();
@@ -63,7 +79,7 @@ mod tests {
     fn test() {
 	let res = Responder::new();
 	let files = set!{
-	    String::from("test1"),
+	    String::from("/foo/bar/test1.td"),
 	    String::from("test2"),
 	    String::from("test3")
 	};
