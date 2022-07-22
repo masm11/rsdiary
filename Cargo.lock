@@ -587,6 +587,8 @@ dependencies = [
 name = "rsdiary_search"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "sudachi",
  "tera",
 ]

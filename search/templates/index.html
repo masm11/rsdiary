@@ -3,7 +3,13 @@
 <title>検索結果 - Result</title>
 </head>
 <body>
-  <input type="text" name="q" value="{{ q }}" />
-  <input type="submit" name="検索" />
+  <input type="text" name="q" value="{{ q }}">
+  <input type="submit" name="検索">
+  <br />
+  {% for f in list -%}
+  <div>
+    {{ f.path }}
+  </div>
+  {% endfor %}
 </body>
 </html>

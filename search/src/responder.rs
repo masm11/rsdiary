@@ -1,5 +1,16 @@
 use std::collections::HashSet;
+use serde::Serialize;
 use tera::{Context, Tera};
+
+#[derive(Serialize)]
+struct ResultFile {
+    path: String,
+/*
+    url: String,
+    title: String,
+    summary: String,
+*/
+}
 
 struct Responder {
 }
@@ -13,8 +24,16 @@ impl Responder {
 	    Ok(t) => t,
 	    Err(e) => return format!("{:?}", e)
 	};
+	let mut list = Vec::<ResultFile>::new();
+	for f in files {
+	    let rf = ResultFile {
+		path: f,
+	    };
+	    list.push(rf);
+	}
 	let mut ctxt = Context::new();
 	ctxt.insert("q", &q);
+	ctxt.insert("list", &list);
 	let html = match tera.render("index.html", &ctxt) {
 	    Ok(html) => html,
 	    Err(e) => return format!("{:?}", e),
@@ -43,7 +62,12 @@ mod tests {
     #[test]
     fn test() {
 	let res = Responder::new();
-	let html = res.make_html(String::from("foo\"bar"), 1, set!{});
+	let files = set!{
+	    String::from("test1"),
+	    String::from("test2"),
+	    String::from("test3")
+	};
+	let html = res.make_html(String::from("foo\"bar"), 1, files);
 	out(&html);
     }
 
