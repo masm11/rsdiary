@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 sudachi = { git = "https://github.com/WorksApplications/sudachi.rs.git", branch = "develop" }
+tera = "1"
 
 [[bin]]
 name = "rsdiary_search"
