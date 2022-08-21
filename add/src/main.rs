@@ -19,10 +19,17 @@ fn replace_lf(buf: &String) -> String {
 }
 
 fn get_dict() -> JapaneseDictionary {
+    let res_dir0 = env::var("RES_DIR").expect("Couldn't get RES_DIR");
+    let res_dir1 = env::var("RES_DIR").expect("Couldn't get RES_DIR");
+    let res_dir2 = env::var("RES_DIR").expect("Couldn't get RES_DIR");
+    let mut json = PathBuf::from(res_dir0);
+    json.push("sudachi.json");
+    let mut sys_dic = PathBuf::from(res_dir2);
+    sys_dic.push("system.dic");
     let config = Config::new(
-	Some(PathBuf::from("./t/sudachi.rs/resources/sudachi.json")),
-	Some(PathBuf::from("./t/sudachi.rs/resources")),
-	Some(PathBuf::from("./t/sudachi.rs/resources/system.dic")),
+	Some(json),
+	Some(PathBuf::from(res_dir1)),
+	Some(sys_dic),
     ).expect("Failed to load config file");
     JapaneseDictionary::from_cfg(&config).expect("Failed to read dict.")
 }
@@ -48,8 +55,19 @@ fn tokenize(string: String, dict: &JapaneseDictionary) -> HashSet<String> {
     set
 }
 
+fn index_file_path(typ: &str, suffix: &str) -> String {
+    let mut path = env::var("INDEX_DIR").expect("Couldn't get INDEX_DIR");
+    path.push_str("/");
+    path.push_str("index.");
+    path.push_str(typ);
+    path.push_str(".txt");
+    path.push_str(suffix);
+    path
+}
+
 fn read_index_words() -> HashMap<String, u32> {
-    let path = Path::new("index.words.txt");
+    let path = index_file_path("words", "");
+    let path = Path::new(&path);
     let file = match File::open(&path) {
 	Err(why) => panic!("couldn't open {}: {}", path.display(), why),
 	Ok(file) => file,
@@ -69,7 +87,8 @@ fn read_index_words() -> HashMap<String, u32> {
 }
 
 fn read_index_matrix() -> HashMap<String, HashSet<u32>> {
-    let path = Path::new("index.matrix.txt");
+    let path = index_file_path("matrix", "");
+    let path = Path::new(&path);
     let file = File::open(&path).expect("Failed to open index.matrix.txt.");
     let file = BufReader::new(file);
 
@@ -91,7 +110,8 @@ fn read_index_matrix() -> HashMap<String, HashSet<u32>> {
 }
 
 fn write_index_words(words: HashMap<String, u32>) {
-    let path = Path::new("index.words.txt.new");
+    let path = index_file_path("words", ".new");
+    let path = Path::new(&path);
     let mut file = File::create(&path).expect("Failed to create index.words.txt.new.");
 
     let mut max_id = 0;
@@ -113,7 +133,8 @@ fn write_index_words(words: HashMap<String, u32>) {
 }
 
 fn write_index_matrix(mat: HashMap::<String, HashSet<u32>>) {
-    let path = Path::new("index.matrix.txt.new");
+    let path = index_file_path("matrix", ".new");
+    let path = Path::new(&path);
     let mut file = File::create(&path).expect("Failed to create index.matrix.txt.new.");
 
     for (fname, word_ids) in mat.iter() {
@@ -126,6 +147,29 @@ fn write_index_matrix(mat: HashMap::<String, HashSet<u32>>) {
 	}
 	file.write_all(b"\n").expect("Failed to write LF.");
     }
+}
+
+fn rename_index() {
+    let src = index_file_path("words", ".old");
+    if let Err(why) = fs::remove_file(src) {
+	eprintln!("couldn't remove {}: {}", "index.words.txt.old", why);
+    }
+    let src = index_file_path("matrix", ".old");
+    if let Err(why) = fs::remove_file(src) {
+	eprintln!("couldn't remove {}: {}", "index.matrix.txt.old", why);
+    }
+    let src = index_file_path("words", "");
+    let dst = index_file_path("words", ".old");
+    fs::rename(src, dst).expect("rename failed");
+    let src = index_file_path("matrix", "");
+    let dst = index_file_path("matrix", ".old");
+    fs::rename(src, dst).expect("rename failed");
+    let src = index_file_path("words", ".new");
+    let dst = index_file_path("words", "");
+    fs::rename(src, dst).expect("rename failed");
+    let src = index_file_path("matrix", ".new");
+    let dst = index_file_path("matrix", "");
+    fs::rename(src, dst).expect("rename failed");
 }
 
 fn main() {
@@ -165,14 +209,5 @@ fn main() {
     write_index_words(index_words);
     write_index_matrix(index_matrix);
 
-    if let Err(why) = fs::remove_file("index.words.txt.old") {
-	eprintln!("couldn't remove {}: {}", "index.words.txt.old", why);
-    }
-    if let Err(why) = fs::remove_file("index.matrix.txt.old") {
-	eprintln!("couldn't remove {}: {}", "index.matrix.txt.old", why);
-    }
-    fs::rename("index.words.txt", "index.words.txt.old").expect("rename failed");
-    fs::rename("index.matrix.txt", "index.matrix.txt.old").expect("rename failed");
-    fs::rename("index.words.txt.new", "index.words.txt").expect("rename failed");
-    fs::rename("index.matrix.txt.new", "index.matrix.txt").expect("rename failed");
+    rename_index();
 }
