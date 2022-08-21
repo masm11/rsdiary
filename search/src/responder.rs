@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io::BufReader;
+use std::io::BufRead;
 use std::collections::HashSet;
 use std::path::Path;
 use serde::Serialize;
@@ -7,18 +10,20 @@ use tera::{Context, Tera};
 struct ResultFile {
     path: String,
     url: String,
-/*
     title: String,
     summary: String,
-*/
 }
 
 impl ResultFile {
     fn new(path: String) -> Self {
 	let url = Self::make_url(&path);
+	let title = Self::make_title(&path);
+	let summary = Self::make_summary(&path);
 	Self {
 	    path,
 	    url,
+	    title,
+	    summary,
 	}
     }
     fn make_url(path: &String) -> String {
@@ -26,6 +31,29 @@ impl ResultFile {
 	let name = p.file_stem().unwrap();
 	let name = name.to_str().unwrap();
 	format!("http://localhost/{}", name)
+    }
+    fn make_title(path: &String) -> String {
+	let path = Path::new(path);
+	let file = File::open(&path).expect("Failed to open split file.");
+	let mut reader = BufReader::new(file);
+	let mut line = String::new();
+	reader.read_line(&mut line);
+	line.trim().to_string()
+    }
+    fn make_summary(path: &String) -> String {
+	let path = Path::new(path);
+	let file = File::open(&path).expect("Failed to open split file.");
+	let mut reader = BufReader::new(file);
+	let mut buf = String::new();
+	reader.read_line(&mut buf);
+	buf.clear();
+	for line in reader.lines() {
+	    let line = line.unwrap();
+	    let l = line.trim();
+	    buf.push_str(l);
+	    buf.push_str(" ");
+	}
+	buf
     }
 }
 
@@ -79,11 +107,10 @@ mod tests {
     fn test() {
 	let res = Responder::new();
 	let files = set!{
-	    String::from("/foo/bar/test1.td"),
-	    String::from("test2"),
-	    String::from("test3")
+	    String::from("/home/masm/esdiary/split/202208/20220805p01.est"),
+	    String::from("/home/masm/esdiary/split/202208/20220803p01.est")
 	};
-	let html = res.make_html(String::from("foo\"bar"), 1, files);
+	let html = res.make_html(String::from("foo>bar"), 1, files);
 	out(&html);
     }
 

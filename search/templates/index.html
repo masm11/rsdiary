@@ -9,6 +9,8 @@
   {% for f in list -%}
   <div>
     {{ f.path }}, {{ f.url | safe }}
+    {{ f.title }}
+    {{ f.summary }}
   </div>
   {% endfor %}
 </body>
