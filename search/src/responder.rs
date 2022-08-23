@@ -57,14 +57,14 @@ impl ResultFile {
     }
 }
 
-struct Responder {
+pub struct Responder {
 }
 
 impl Responder {
-    fn new() -> Self {
+    pub fn new() -> Self {
 	Responder {}
     }
-    fn make_html(&self, q: String, page_no: i32, files: HashSet<String>) -> String {
+    pub fn make_html(&self, q: String, page_no: i32, files: HashSet<String>) -> String {
 	let mut tera = match Tera::new("templates/*.html") {
 	    Ok(t) => t,
 	    Err(e) => return format!("{:?}", e)
